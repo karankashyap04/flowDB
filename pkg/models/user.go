@@ -6,6 +6,6 @@ type User struct {
 	Name string
 	Age json.Number
 	Occupation string
-	Contact string
+	Email string
 	Address Address
 }

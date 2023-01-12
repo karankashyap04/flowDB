@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	example "flowDB/pkg/example"
+)
 
 func main() {
-	fmt.Println("flowDB -- built with GoLang!")
+	example.RunExample()
 }

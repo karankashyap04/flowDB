@@ -16,7 +16,7 @@ func RunExample() {
 	fmt.Println("flowDB -- built with GoLang!")
 
 	dbDir := "./db/"
-	db, err := driver.CreateDB(dbDir, nil)
+	db, err := driver.CreateDB(dbDir)
 	checkError(err)
 
 	// sample data

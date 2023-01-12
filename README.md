@@ -10,4 +10,3 @@ flowDB has a database driver, which provides an interface between the Go code an
 * `Read`
 * `ReadAll`
 * `Delete`
-* `DeleteAll`

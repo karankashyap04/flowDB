@@ -71,6 +71,31 @@ func (d *Driver) Read(collection string, name string, loadHere interface{}) erro
 	return err
 }
 
+func (d *Driver) ReadAll(collection string) ([]string, error) {
+	collection = strings.TrimSpace(collection)
+	if collection == "" {
+		return nil, fmt.Errorf("Received an empty collection name; a non-empty collection name was expected to be read from!")
+	}
+
+	collectionDir := filepath.Join(d.dbDir, collection)
+	fileNames, err := os.ReadDir(collectionDir)
+	if err != nil {
+		return nil, fmt.Errorf("An error occurred while reading the data from the provided collection -- this is probably because the collection with the provided name does not exist.")
+	}
+
+	var data []string
+	for _, fileName := range fileNames {
+		filePath := filepath.Join(collectionDir, fileName.Name())
+		fileBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, err
+		}
+		fileData := string(fileBytes)
+		data = append(data, fileData)
+	}
+	return data, nil
+}
+
 func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
 	d.myMutex.Lock()
 	defer d.myMutex.Unlock()

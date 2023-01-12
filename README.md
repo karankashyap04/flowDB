@@ -11,3 +11,5 @@ flowDB has a database driver, which provides an interface between the Go code an
 * `ReadAll`
 * `Delete`
 * `DeleteAll`
+
+Within the `pkg` directory, there is an `example` subdirectory with a file `example.go`. This file contains code with some brief examples that demonstrate how each of the core database functions listed above can be used. _NOTE_: The code in this file is also the code that is run by the `main.go` file.

@@ -131,6 +131,12 @@ func (d* Driver) Write(collection string, name string, data interface{}) error {
 func (d* Driver) Delete(collection string, toDelete string) error { // Deletes a single record
 	collection = strings.TrimSpace(collection)
 	toDelete = strings.TrimSpace(toDelete)
+	if collection == "" {
+		return fmt.Errorf("Expected a non-empty collection name!")
+	}
+	if toDelete == "" {
+		return fmt.Errorf("Expected a non-empty filename to be deleted!")
+	}
 
 	collectionMutex := d.getOrCreateCollectionMutex(collection)
 	collectionMutex.Lock()
@@ -150,7 +156,10 @@ func (d* Driver) Delete(collection string, toDelete string) error { // Deletes a
 
 func (d* Driver) DeleteAll(collection string, subdirectory string) error { // Deletes an entire collection (or a subdirectory of a collection)
 	collection = strings.TrimSpace(collection)
-	subdirectory = strings.TrimSpace(subdirectory)
+	if collection == "" {
+		return fmt.Errorf("Expected a non-empty collection name!")
+	}
+	subdirectory = strings.TrimSpace(subdirectory) // the subdirectory can be empty (if we just want to delete a collection)
 
 	collectionMutex := d.getOrCreateCollectionMutex(collection)
 	collectionMutex.Lock()

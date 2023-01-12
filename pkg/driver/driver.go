@@ -160,6 +160,26 @@ func (d* Driver) Delete(collection string, toDelete string) error { // Deletes a
 	return fmt.Errorf("The provided filepath was for an entire directory, and not for a single database record (as expected)!")
 }
 
+func (d* Driver) DeleteAll(collection string, subdirectory string) error { // Deletes an entire collection (or a subdirectory of a collection)
+	collection = strings.TrimSpace(collection)
+	subdirectory = strings.TrimSpace(subdirectory)
+
+	collectionMutex := d.getOrCreateCollectionMutex(collection)
+	collectionMutex.Lock()
+	defer collectionMutex.Unlock()
+
+	toDeletePath := filepath.Join(d.dbDir, collection, subdirectory)
+	fileInfo, err := getDBFileInfo(toDeletePath)
+	if err != nil || fileInfo == nil {
+		return fmt.Errorf("The filepath at which the data was to be deleted does not exist!")
+	}
+	if fileInfo.Mode().IsDir() { // if it is a directory (collection, or subdirectory of collection)
+		return os.RemoveAll(toDeletePath)
+	}
+	// filepath is for a single file
+	return fmt.Errorf("The provided filepath was for a single database record, and not for an entire collection or collection subdirectory (as expected)!")
+}
+
 func doesDBExist(cleanedDir string) bool {
 	_, err := os.Stat(cleanedDir)
 	return !os.IsNotExist(err)

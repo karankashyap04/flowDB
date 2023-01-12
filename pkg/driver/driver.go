@@ -46,6 +46,31 @@ func CreateDB(dbDir string, loggerOptions *Logger.LoggerOptions) (*Driver, error
 	return &dbDriver, err
 }
 
+func (d *Driver) Read(collection string, name string, loadHere interface{}) error {
+	collection = strings.TrimSpace(collection)
+	name = strings.TrimSpace(name)
+	if collection == "" {
+		return fmt.Errorf("Received an empty collection name; a non-empty collection name was expected to be read from!")
+	}
+	if name == "" {
+		return fmt.Errorf("Received an empty name; a non-empty target file name was expected to be read from!")
+	}
+
+	filePath := filepath.Join(d.dbDir, collection, name)
+	_, err := getDBFileInfo(filePath)
+	if err != nil {
+		return err
+	}
+	
+	filePath = filePath + ".json"
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &loadHere)
+	return err
+}
+
 func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
 	d.myMutex.Lock()
 	defer d.myMutex.Unlock()
@@ -62,10 +87,10 @@ func (d* Driver) Write(collection string, name string, data interface{}) error {
 	collection = strings.TrimSpace(collection)
 	name = strings.TrimSpace(name)
 	if collection == "" {
-		return fmt.Errorf("Received an empty collection name; a non-empty collection name was expected!")
+		return fmt.Errorf("Received an empty collection name; a non-empty collection name was expected to be written into!")
 	}
 	if name == "" {
-		return fmt.Errorf("Received an empty name while inserting data; a non-empty target file name was expected!")
+		return fmt.Errorf("Received an empty name while inserting data; a non-empty target file name was expected to be written to!")
 	}
 
 	myMutex := d.getOrCreateCollectionMutex(collection)
@@ -80,12 +105,10 @@ func (d* Driver) Write(collection string, name string, data interface{}) error {
 	}
 	fileContent, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
-		d.log.Fatal(err.Error())
 		return err
 	}
 	err = os.WriteFile(tempFilepath, fileContent, 0666)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	err = os.Rename(tempFilepath, insertFilepath)

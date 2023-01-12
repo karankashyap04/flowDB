@@ -3,9 +3,12 @@ package driver
 // The driver will communicate between the Go code and the actual database
 
 import (
+	"encoding/json"
 	Logger "flowDB/pkg/logger"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/jcelliott/lumber"
@@ -55,7 +58,49 @@ func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
 	return collectionMutex
 }
 
+func (d* Driver) Write(collection string, name string, data interface{}) error {
+	collection = strings.TrimSpace(collection)
+	name = strings.TrimSpace(name)
+	if collection == "" {
+		return fmt.Errorf("Received an empty collection name; a non-empty collection name was expected!")
+	}
+	if name == "" {
+		return fmt.Errorf("Received an empty name while inserting data; a non-empty target file name was expected!")
+	}
+
+	myMutex := d.getOrCreateCollectionMutex(collection)
+	myMutex.Lock()
+	defer myMutex.Unlock()
+
+	insertFilepath := filepath.Join(d.dbDir, collection, name + ".json")
+	tempFilepath := filepath.Join(d.dbDir, collection, name + ".tmp")
+	err := os.MkdirAll(filepath.Join(d.dbDir, collection), 0755)
+	if err != nil {
+		return err
+	}
+	fileContent, err := json.MarshalIndent(data, "", "\t")
+	if err != nil {
+		d.log.Fatal(err.Error())
+		return err
+	}
+	err = os.WriteFile(tempFilepath, fileContent, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	err = os.Rename(tempFilepath, insertFilepath)
+	return err
+}
+
 func doesDBExist(cleanedDir string) bool {
 	_, err := os.Stat(cleanedDir)
 	return !os.IsNotExist(err)
+}
+
+func getDBFileInfo(filePath string) (os.FileInfo, error) {
+	fileInfo, err := os.Stat(filepath.Clean(filePath))
+	if os.IsNotExist(err) {
+		fileInfo, err = os.Stat(filepath.Clean(filePath + ".json"))
+	}
+	return fileInfo, err
 }

@@ -15,26 +15,11 @@ import (
 )
 
 type Driver struct {
-	myMutex sync.Mutex
+	collectionMutex sync.Mutex
 	allMutexes map[string]*sync.Mutex // keyed by collection names
 	dbDir string
 	log Logger.Logger
 }
-
-func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
-	d.myMutex.Lock()
-	defer d.myMutex.Unlock()
-	collectionMutex, collectionMutexExists := d.allMutexes[collection]
-	if collectionMutexExists {
-		return collectionMutex
-	}
-	collectionMutex = &sync.Mutex{}
-	d.allMutexes[collection] = collectionMutex
-	return collectionMutex
-}
-
-
-//---- DB functionality (create DB, add data, read data, delete data): ----//
 
 func CreateDB(dbDir string, loggerOptions *Logger.LoggerOptions) (*Driver, error) {
 	var options Logger.LoggerOptions
@@ -111,6 +96,18 @@ func (d *Driver) ReadAll(collection string) ([]string, error) {
 	return data, nil
 }
 
+func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
+	d.collectionMutex.Lock()
+	defer d.collectionMutex.Unlock()
+	collectionMutex, collectionMutexExists := d.allMutexes[collection]
+	if collectionMutexExists {
+		return collectionMutex
+	}
+	collectionMutex = &sync.Mutex{}
+	d.allMutexes[collection] = collectionMutex
+	return collectionMutex
+}
+
 func (d* Driver) Write(collection string, name string, data interface{}) error {
 	collection = strings.TrimSpace(collection)
 	name = strings.TrimSpace(name)
@@ -121,9 +118,9 @@ func (d* Driver) Write(collection string, name string, data interface{}) error {
 		return fmt.Errorf("Received an empty name while inserting data; a non-empty target file name was expected to be written to!")
 	}
 
-	myMutex := d.getOrCreateCollectionMutex(collection)
-	myMutex.Lock()
-	defer myMutex.Unlock()
+	collectionMutex := d.getOrCreateCollectionMutex(collection)
+	collectionMutex.Lock()
+	defer collectionMutex.Unlock()
 
 	insertFilepath := filepath.Join(d.dbDir, collection, name + ".json")
 	tempFilepath := filepath.Join(d.dbDir, collection, name + ".tmp")
@@ -141,6 +138,26 @@ func (d* Driver) Write(collection string, name string, data interface{}) error {
 	}
 	err = os.Rename(tempFilepath, insertFilepath)
 	return err
+}
+
+func (d* Driver) Delete(collection string, toDelete string) error { // Deletes a single record
+	collection = strings.TrimSpace(collection)
+	toDelete = strings.TrimSpace(toDelete)
+
+	collectionMutex := d.getOrCreateCollectionMutex(collection)
+	collectionMutex.Lock()
+	defer collectionMutex.Unlock()
+
+	toDeletePath := filepath.Join(d.dbDir, collection, toDelete)
+	fileInfo, err := getDBFileInfo(toDeletePath)
+	if err != nil || fileInfo == nil {
+		return fmt.Errorf("The filepath at which the data was to be deleted does not exist!")
+	}
+	if fileInfo.Mode().IsRegular() { // if it is a single file
+		return os.Remove(toDeletePath + ".json")
+	}
+	// filepath is for a directory
+	return fmt.Errorf("The provided filepath was for an entire directory, and not for a single database record (as expected)!")
 }
 
 func doesDBExist(cleanedDir string) bool {

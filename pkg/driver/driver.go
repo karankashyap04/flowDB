@@ -21,6 +21,21 @@ type Driver struct {
 	log Logger.Logger
 }
 
+func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
+	d.myMutex.Lock()
+	defer d.myMutex.Unlock()
+	collectionMutex, collectionMutexExists := d.allMutexes[collection]
+	if collectionMutexExists {
+		return collectionMutex
+	}
+	collectionMutex = &sync.Mutex{}
+	d.allMutexes[collection] = collectionMutex
+	return collectionMutex
+}
+
+
+//---- DB functionality (create DB, add data, read data, delete data): ----//
+
 func CreateDB(dbDir string, loggerOptions *Logger.LoggerOptions) (*Driver, error) {
 	var options Logger.LoggerOptions
 	if loggerOptions == nil {
@@ -94,18 +109,6 @@ func (d *Driver) ReadAll(collection string) ([]string, error) {
 		data = append(data, fileData)
 	}
 	return data, nil
-}
-
-func (d* Driver) getOrCreateCollectionMutex(collection string) *sync.Mutex {
-	d.myMutex.Lock()
-	defer d.myMutex.Unlock()
-	collectionMutex, collectionMutexExists := d.allMutexes[collection]
-	if collectionMutexExists {
-		return collectionMutex
-	}
-	collectionMutex = &sync.Mutex{}
-	d.allMutexes[collection] = collectionMutex
-	return collectionMutex
 }
 
 func (d* Driver) Write(collection string, name string, data interface{}) error {
